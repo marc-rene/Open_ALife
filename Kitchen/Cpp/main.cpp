@@ -15,21 +15,24 @@
 //		               Here :)
 
 
-//		It probably would have made more sense to write everything into the one file 
+//			It probably would have made more sense to write everything into the one file 
 //		but oh sweet jesus christ on a tricycle, that would be hell to develop in!
-//		I also understand that having mulitple #includes in the one cpp file mightve made sense
-//		but in this context this works flawlessly!
+//		I also understand that having mulitple #includes in the one cpp file might've made sense
+//		but in this context this works perfectly fine! :)
 //		
 //			The purpose of this project is to make an open source version of the
 //		A-Life system in the S.T.A.L.K.E.R video game francise that can be implemented into any 
 //		application that may benefit from it.
+//
+//			The world is comprised into a 2d grid with different factions, Humans, Wildlife, etc...
+//		can fight for territory, simply just exist in the world, and/or interact with it in numberous different ways.  
 // 
 //		The code is seperated into 3 clear-cut sections, and named using a restaurant as a metaphor:
 //			1. 	The backend (what you are seeing here, is called the kitchen)
 //			2.	the API (the waitors)
 //			3.	the frontend (What will send in the starting parametres, is called the customers because they will be the ones who see the food)
 //		
-//		The starting parametres should be sent in from the frontend, and read in from our waiters/API files.
+//			The starting parametres should be sent in from the frontend, and read in from our waiters/API files.
 //		The backend/kitchen should then start operation based on those parametres passed in from the Waiters/API
 //		and begin simulation, saving its state to the Waiter/API Files.
 //		Hopefully everything should be easy enough to figure out and apologies if not.
@@ -41,7 +44,7 @@
 //			Reddit:		I_dont_like_pears
 //			Discord:	Djagamoe #3385
 //
-//	Good hunting S.T.A.L.K.E.R 																					;)
+//	Good hunting S.T.A.L.K.E.R						;)
 
 
 
@@ -49,7 +52,7 @@
 int main() 
 {
     INIT_WORLD(); // Get all of our starting parametres from the Waiters / API files
-
+	
 	// Now lets initialise our threads! 
 	// Each faction gets their own
 	std::vector<std::thread> thr_pool(HOW_MANY_FACTIONS);	
@@ -80,9 +83,15 @@ int main()
 
 
 
+
+
 	//////////////////////////////////////////////////////////////
 
 	
-	printf("\n\nyay all done\n\n");
+	
+	HIGH_LOG
+		printf("\n\nyay all done\n\n");
+	END_LOG
+
 	return 0;
 }

@@ -40,32 +40,6 @@ public:
 	Climates	Climate;
 
 
-	static void CLEAR()
-	{
-		for (int i = 0; i < WORLD_SIZE; i++)
-		{
-			WORLD[i].ID_of_Faction_Here 			= 0;
-			WORLD[i].Military_Presense 				= 0;
-			WORLD[i].Base_Traversing_Difficulty 	= 0;
-			WORLD[i].Traversing_difficulty_Modifier = 0;
-			WORLD[i].Change_Amount_per_second 		= 0;
-
-			if ( i <= (WORLD_SIZE/3) )
-			{
-				WORLD[i].Climate = Cold;
-			}
-			else if ( i <= ( (WORLD_SIZE/3) * 2 ) )
-			{
-				WORLD[i].Climate = Mild;
-			}
-			else
-			{
-				WORLD[i].Climate = Hot;
-			}
-		}//end for
-	}
-
-
 
 	static void Start_Storm_in_Climate_X(Climates which_climate_to_affect, mint intensity, int duration_in_seconds)	// Start a weather event for only a certain climate with X intensity
 	{

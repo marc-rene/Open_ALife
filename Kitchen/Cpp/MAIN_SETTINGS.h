@@ -32,12 +32,20 @@
 
 #define 			SLEEP(x)						std::this_thread::sleep_for(std::chrono::seconds(x) )
 #define 			NAP(x)							std::this_thread::sleep_for(std::chrono::milliseconds(x) )
-#define				SECONDS_PER_SECOND				1	// this is mostly for how long the avergae sleep should be
 
 #define     		HIGH_LOG      					if(LOG_LEVEL >= 3){
 #define     		MED_LOG       					if(LOG_LEVEL >= 2){
 #define     		LOW_LOG       					if(LOG_LEVEL >= 1){
 #define     		END_LOG             			}
+
+
+unsigned int		SECONDS_PER_SECOND			=	1;		// this is mostly for Speed control... a bigger number means the program will run slower but use up less resources hopefully
+bool				HIGH_PERFORMANCE_MODE		=	0;
+#define				IF_HIGH_PERFORMANCE				if(HIGH_PERFORMANCE_MODE)	// 	My laptop may not be the fastest thing in the world...
+#define				IF_LOW_PERFORMANCE				if(!HIGH_PERFORMANCE_MODE)	//	in fact it's not fast at all actually...
+																				//	But damn it! it certainly tries! and hopefully this should help it!
+																				//	This was all tested on an Intel Celeron N6000 at 20% battery life most of the time
+																
 
 
 
@@ -110,7 +118,8 @@ void get_set_ints_from_config()
 																										
 	//	And if we will extract that line, what data will we set											
 	enum    var_types 	                                                                               
-    {	how_many_factions, rand_strength_range_max,	rand_strength_range_min,	e_Log_Level, 	world_width,	world_height	};			           
+    {	how_many_factions, 	rand_strength_range_max,	rand_strength_range_min,	e_Log_Level, 	world_width,	world_height,
+		performance_mode, 	speed_divider	};			           
                                                                                                        
     var_types next_var;																					
 																										
@@ -128,6 +137,7 @@ void get_set_ints_from_config()
 			{
 				printf(LOW_SEVERITY_ERROR);
 				printf("\nAh fiddlestciks! We couldn't open the mints file \ntrying to open file again! \nWish us luck");
+				printf("\nCHECK MAIN_SETTINGS.h AND SEE IF THE RELATIVE PATHS ARE CORRECT... Visual Studio and Visual Studio Code cause Tomfoolery here!!!");
 				config.open(MINT_CONFIG_FILE_PATH);
 				SLEEP(SECONDS_PER_SECOND);
 			}//end else
@@ -193,11 +203,20 @@ void get_set_ints_from_config()
 				case world_height:																		
 					WORLD_HEIGHT = (uMint)stoi(temp_string);     										
 					extract_next_line = false;															
+					break;						
+
+				case performance_mode:
+					HIGH_PERFORMANCE_MODE = stoi(temp_string);
+					extract_next_line = false;
+					break;		
+
+				case speed_divider:
+					SECONDS_PER_SECOND = stoi(temp_string);
+					extract_next_line = false;
 					break;																				
 																										
-																										
 				default:																				
-					printf("ERROR IN get_set_ints_from_config SWITCH PART");							
+					printf("\nERROR IN get_set_ints_from_config SWITCH PART");							
 					break;																				
 																										
 			}//end switch																				
@@ -251,7 +270,19 @@ void get_set_ints_from_config()
         {																					
             next_var = rand_strength_range_min;														
 			extract_next_line = true;														
-        }      																				
+        }    
+
+		else if (temp_string.find("[USE HIGH PERFORMANCE MODE? 0 or 1]") != std::string::npos )
+		{
+			next_var = performance_mode;
+			extract_next_line = true;
+		}  
+
+		else if (temp_string.find("[SPEED DIVIDER]") != std::string::npos )
+		{
+			next_var = speed_divider;
+			extract_next_line = true;
+		}  																				
 		//	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	//			
 																										
 	}//end while																						
@@ -272,7 +303,9 @@ void get_set_ints_from_config()
 ////////////////////////			EXACT SAME AS THE ABOVE FUNCTION, EXCEPT WE'RE GETTING FACTION DETAILS			////////////////////	
 
 void get_set_fac_details_from_config()																										
-{																																			
+{		
+	uMint counter = 0; //DEBUG ONLY
+
 	std::ifstream   config( FAC_CONFIG_FILE_PATH );    //  find and open the faction config file											
 	std::string     temp_string;																											
 	bool start_extraction = false;																											
@@ -289,6 +322,7 @@ void get_set_fac_details_from_config()
 			{
 				printf(LOW_SEVERITY_ERROR);
 				printf("\nAh fiddlestciks! We couldn't open the fuccs file \ntrying to open file again! \nWish us luck");
+				printf("\nCHECK MAIN_SETTINGS.h AND SEE IF THE RELATIVE PATHS ARE CORRECT... Visual Studio and VSCode cause Tomfoolery here!!!");
 				config.open(MINT_CONFIG_FILE_PATH);
 				SLEEP(SECONDS_PER_SECOND);
 			}//end else
@@ -319,7 +353,11 @@ void get_set_fac_details_from_config()
 
 		//	Go ahead been given, we've read START READ																																
 		else if (start_extraction)																												
-		{																															
+		{		
+			counter++;
+
+			HIGH_LOG 	printf("\nWe on the %dth guy\n", counter);	END_LOG																													
+			
 			uS div_indexs[5];																												
 			uMint stage = 0;																												
 			temp_string.erase( remove( temp_string.begin(), temp_string.end(), '\t' ), temp_string.end());	// get rid of tabs
@@ -364,9 +402,8 @@ void get_set_fac_details_from_config()
 
 					if (counter > 200)
 					{
-						HIGH_LOG	
-
-							printf("\n%s\nBRO WTF! Either random here sucks or Im just a bad programmer!\n", LOW_SEVERITY_ERROR);
+						HIGH_LOG
+							printf("\n%s : BRO WTF! Either random here sucks or Im just a bad programmer!\n", LOW_SEVERITY_ERROR);
 							printf("\nWe doing the crappy method of randomness");
 						END_LOG
 
@@ -539,13 +576,13 @@ void Check_to_See_If_We_Should_Still_Be_Running()
 			Stay_Alive	=	false;
 			Exiting = true;
 			printf("\n\n\t\tATTENTION!\tWE GONNA SELF-DESTRUCT NOW!\n\t\t\tEXITING");
-			SLEEP(1);
+			SLEEP(SECONDS_PER_SECOND);
 			printf(".");
-			SLEEP(1);
+			SLEEP(SECONDS_PER_SECOND);
 			printf(".");
-			SLEEP(1);
+			SLEEP(SECONDS_PER_SECOND);
 			printf(".");
-			SLEEP(1);
+			SLEEP(SECONDS_PER_SECOND);
 			printf("\n\nBye bye :)");
 			SLEEP(SECONDS_PER_SECOND);
 		}

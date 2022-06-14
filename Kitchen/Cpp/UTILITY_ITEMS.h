@@ -12,6 +12,29 @@ void Test_mints()
 	printf("Faction amount: %d\n", 		HOW_MANY_FACTIONS);
 	printf("Faction Log level: %d\n", 	LOG_LEVEL);
 	printf("World Size is %d wide, %d high\n", 	WORLD_WIDTH, WORLD_HEIGHT);
+	printf("Performance mode is %d\n", HIGH_PERFORMANCE_MODE);
+	printf("Speed divider is %d\n", SECONDS_PER_SECOND);
+}
+
+
+
+void Check_Work_Permission_For_Faction()
+{
+	while (!Exiting)
+	{
+		if (Permission_to_work == true)
+		{	continue; 	}
+
+		else
+		{	
+			for (uMint i = 0; i < HOW_MANY_FACTIONS; i++)
+			{
+				ALL_FACTIONS.at(i).TAKE_A_BREAK(SECONDS_PER_SECOND*1000);
+			}	
+		}
+
+		SLEEP(SECONDS_PER_SECOND*2);
+	}
 }
 
 
@@ -32,20 +55,22 @@ void Write_Map_to_Waiters_File()
 			world_copy[i].Base_Traversing_Difficulty 		= WORLD[i].Base_Traversing_Difficulty;
 			world_copy[i].Traversing_difficulty_Modifier 	= WORLD[i].Traversing_difficulty_Modifier;
 			world_copy[i].Climate 							= WORLD[i].Climate;
-			//world_copy.push_back(WORLD.at(i)); 
+			
+			IF_LOW_PERFORMANCE { NAP(SECONDS_PER_SECOND*100);	}
 		}
 		
-		Permission_to_work = true;
+		IF_HIGH_PERFORMANCE	{	Permission_to_work = true;	}
+		IF_LOW_PERFORMANCE	{	NAP(SECONDS_PER_SECOND*50);	}
 
 		std::ofstream world_file(WORLD_FILE_PATH);
 
-		if (!world_file)
+		if (!world_file) // if we couldn't open the map.world file
 		{
 			bool opened = false;
 
 			for (uMint i = 0; i < 10; i++)
 			{
-				SLEEP(2);
+				SLEEP(SECONDS_PER_SECOND);
 				world_file.open(WORLD_FILE_PATH);
 				if (world_file)
 				{
@@ -64,7 +89,7 @@ void Write_Map_to_Waiters_File()
 				
 				for (uMint i = 0; i < 10; i++)
 				{
-					SLEEP(2);
+					SLEEP(SECONDS_PER_SECOND);
 					world_file.open(WORLD_FILE_PATH);
 					if (world_file)
 					{
@@ -78,13 +103,15 @@ void Write_Map_to_Waiters_File()
 			{
 				printf("\n %s \n", HIGH_SEVERITY_ERROR);
 				printf("CANT WRITE TO WORLD FILE!\nEXITING");
-				SLEEP(2);
+				SLEEP(SECONDS_PER_SECOND);
 				exit(12);
 			}
 		}//end if
 	
+
 		world_file << "ID \t Local Force Size \t Traversing Difficulty \t Traversing Modifier \t Climate \n";
 
+		printf("\nwriting now!");
 		for (uS i = 0; i < WORLD_SIZE; i++)
 		{
 			HIGH_LOG
@@ -95,11 +122,15 @@ void Write_Map_to_Waiters_File()
 											<< (char)(world_copy[i].Climate);
 			END_LOG
 
-			world_file << (int)world_copy[i].ID_of_Faction_Here 			<< "\t | ";
-			world_file << (int)world_copy[i].Military_Presense				<< "\t\t\t\t | ";
-			world_file << (int)world_copy[i].Base_Traversing_Difficulty		<< "\t\t\t\t\t | ";
-			world_file << (int)world_copy[i].Traversing_difficulty_Modifier	<< "\t\t\t\t\t | ";
-			world_file << (char)(world_copy[i].Climate)						<< "\n"	;
+			world_file << (int)world_copy[i].ID_of_Faction_Here 	<< "\t | "
+			<< (int)world_copy[i].Military_Presense					<< "\t\t\t\t | "
+			<< (int)world_copy[i].Base_Traversing_Difficulty		<< "\t\t\t\t\t | "
+			<< (int)world_copy[i].Traversing_difficulty_Modifier	<< "\t\t\t\t\t | "
+			<< (char)(world_copy[i].Climate)						<< "\n";	
+			
+			//Writing was VERY CPU intensive, hopefully this nap helps
+			IF_HIGH_PERFORMANCE	{	NAP(SECONDS_PER_SECOND*5);		}
+			IF_LOW_PERFORMANCE	{	NAP(SECONDS_PER_SECOND*500);	}
 		}
 
 		world_file << "[END REACHED... READ/WRITE SUCCESS... YAY]";
@@ -107,9 +138,9 @@ void Write_Map_to_Waiters_File()
 
 
 		//		https://stackoverflow.com/a/10195497
-		//  谢谢我的朋友！您太棒了! 
-		//	Merci beaucoup et faire des bon rêves chaque jour mon pote!
 		//	May you have wonderful dreams and prosper in life: 
+		//	Merci beaucoup et faire des bon rêves chaque jour mon pote!
+		//  谢谢我的朋友！您太棒了! 对不起我不知道汉语... 我是学生中文 :) 
 		
 		std::ifstream  src(WORLD_FILE_PATH, std::ios::binary);
 		std::ofstream  dst(WORLD_BACKUP,   	std::ios::binary);
@@ -117,8 +148,11 @@ void Write_Map_to_Waiters_File()
 		src.close();
 		dst.close();
 
-		world_copy.~vector(); 	// Dont need it anymore
-		SLEEP(SECONDS_PER_SECOND*5);
+		world_copy.~vector(); 	// Dont need it anymore, hopefully the space will be freed up for something else 
+		IF_HIGH_PERFORMANCE	{	SLEEP(SECONDS_PER_SECOND*3);	}
+		IF_LOW_PERFORMANCE	{	SLEEP(SECONDS_PER_SECOND*15);	}
+		
+		IF_LOW_PERFORMANCE	{	Permission_to_work = true;	}
 	}
 	
 
@@ -176,7 +210,7 @@ void print_factions()
 		
 		
 		std::cout << ")\t\t: " << ALL_FACTIONS[i].Fac_Home_Location;
-		std::cout << "\t: " << ALL_FACTIONS[i].Fac_Selected_Force_Location << "\t: ";
+		std::cout << "\t: " << ALL_FACTIONS[i].Selected_Force_Location << "\t: ";
 		switch (ALL_FACTIONS[i].Military_Structure)
 		{
 			case Disorganised:
@@ -221,6 +255,9 @@ void Startup_Threads(std::vector<std::thread>* thread_pool,	bool show_id = false
 		ALL_FACTIONS[i].HEART_ptr = &thread_pool->at(i);
 		thread_pool->at(i).detach();
 	}
+
+	std::thread faction_permission_check_thread(Check_Work_Permission_For_Faction);
+	faction_permission_check_thread.detach();
 }
 
 
@@ -248,6 +285,33 @@ void Check_for_out_of_Bounds_Faction_Starting_Positions()
 
 
 
+void Clear_World()
+{
+	for (int i = 0; i < WORLD_SIZE; i++)
+	{
+		WORLD[i].ID_of_Faction_Here 			= 0;
+		WORLD[i].Military_Presense 				= 0;
+		WORLD[i].Base_Traversing_Difficulty 	= 0;
+		WORLD[i].Traversing_difficulty_Modifier = 0;
+		WORLD[i].Change_Amount_per_second 		= 0;
+	
+		if ( i <= (WORLD_SIZE/3) )
+		{
+			WORLD[i].Climate = Cold;
+		}
+		else if ( i <= ( (WORLD_SIZE/3) * 2 ) )
+		{
+			WORLD[i].Climate = Mild;
+		}
+		else
+		{
+			WORLD[i].Climate = Hot;
+		}
+	}//end for
+}
+
+
+
 void INIT_WORLD()
 {
 	srand(420);
@@ -259,12 +323,19 @@ void INIT_WORLD()
 	
 	get_set_fac_details_from_config();	//	get faction details, read it like a csv, get names, structures, etc...
 	HIGH_LOG	printf("\nGot Fuccs!");			END_LOG
-	
+
+	Test_mints();
+
 	Check_for_out_of_Bounds_Faction_Starting_Positions();
 	HIGH_LOG	printf("\nChecked for out-of-bounds!");	END_LOG
 
+	HIGH_LOG	printf("\nReserving world space");	END_LOG
 	WORLD.reserve(WORLD_SIZE);	// Just to try make performance nicer!
-	WORLD[0].CLEAR();	//	This is a static function, calling it once will clear everything, no need to call it for each indivudual tile
+	
+	HIGH_LOG	printf("\nReserved world space");	END_LOG
+	Clear_World();
+	
+	HIGH_LOG	printf("\nINIT WORLD() All done");	END_LOG
 }
 
 

@@ -23,7 +23,7 @@ struct FACTION
 {
     std::string                     Fac_Name; // wanted to make this a char array but we're dealing with unknown values at runtime, array allocation is impossible without black magic... std::string will have to do
 	std::string						Callsign;
-    uS                              Fac_Selected_Force_Location;
+    uS                              Selected_Force_Location;
     uS                              Fac_Home_Location;  
 	
     std::thread*                    HEART_ptr;      //  cant do anything without a heart
@@ -53,7 +53,7 @@ struct FACTION
 
         Fac_Name           			=   Faction_Names[Fac_ID];
         Fac_Home_Location           =   Faction_Homes[Fac_ID];
-        Fac_Selected_Force_Location = 	Faction_Homes[Fac_ID];
+        Selected_Force_Location = 	Faction_Homes[Fac_ID];
 		Military_Structure			=	Faction_Structures[Fac_ID];
 
         WORLD[Fac_Home_Location].ID_of_Faction_Here = Fac_ID;
@@ -76,7 +76,7 @@ struct FACTION
 		Fac_ID 						= 	id;
 		Fac_Name 					= 	name;
 		Callsign 					= 	callsign;
-		Fac_Selected_Force_Location = 	starting_strength;
+		Selected_Force_Location = 	starting_strength;
 		Fac_Home_Location 			= 	starting_tile;
 		HEART_ptr 					= 	thread_to_use;
 		Military_Structure 			= 	military_structure;
@@ -97,7 +97,7 @@ struct FACTION
 			std::cout << Fac_Name << " is starting move function\n ";
         END_LOG
 
-		Co_Ordinates location = Int_To_Co_Ordinates(Fac_Selected_Force_Location);
+		Co_Ordinates location = Int_To_Co_Ordinates(Selected_Force_Location);
 
         /*
         YO YO
@@ -127,13 +127,13 @@ struct FACTION
                 else
                 {
 					LOW_LOG
-						std::cout << "From " << Fac_Selected_Force_Location << ", ";
+						std::cout << "From " << Selected_Force_Location << ", ";
 					END_LOG
 
 					location.Y += 1;
-                    Fac_Selected_Force_Location = Co_Ordinates_to_Int(location);
+                    Selected_Force_Location = Co_Ordinates_to_Int(location);
                     LOW_LOG
-						std::cout << Fac_Name << " has gone North and is at " << Fac_Selected_Force_Location <<"\n";
+						std::cout << Fac_Name << " has gone North and is at " << Selected_Force_Location <<"\n";
                     END_LOG
                 }
                 break;
@@ -154,13 +154,13 @@ struct FACTION
                 else
                 {
 					LOW_LOG
-						std::cout << "From " << Fac_Selected_Force_Location << ", ";
+						std::cout << "From " << Selected_Force_Location << ", ";
 					END_LOG
 					
 					location.X += 1;
-					Fac_Selected_Force_Location = Co_Ordinates_to_Int(location);
+					Selected_Force_Location = Co_Ordinates_to_Int(location);
                     LOW_LOG
-						std::cout << Fac_Name << " has gone East and is at " << Fac_Selected_Force_Location <<"\n";
+						std::cout << Fac_Name << " has gone East and is at " << Selected_Force_Location <<"\n";
                     END_LOG
                 }
                 break;
@@ -182,13 +182,13 @@ struct FACTION
                 else
                 {
 					LOW_LOG
-						std::cout << "From " << Fac_Selected_Force_Location << ", ";
+						std::cout << "From " << Selected_Force_Location << ", ";
 					END_LOG
 					
 					location.Y -= 1;
-                    Fac_Selected_Force_Location = Co_Ordinates_to_Int(location);
+                    Selected_Force_Location = Co_Ordinates_to_Int(location);
                     LOW_LOG
-						std::cout << Fac_Name << " has gone South and is at " << Fac_Selected_Force_Location <<"\n";
+						std::cout << Fac_Name << " has gone South and is at " << Selected_Force_Location <<"\n";
                     END_LOG
                 }
                 break;
@@ -209,13 +209,13 @@ struct FACTION
                 else
                 {
 					LOW_LOG
-						std::cout << "From " << Fac_Selected_Force_Location << ", ";
+						std::cout << "From " << Selected_Force_Location << ", ";
 					END_LOG
 					
 					location.X -= 1;
-                    Fac_Selected_Force_Location = Co_Ordinates_to_Int(location);
+                    Selected_Force_Location = Co_Ordinates_to_Int(location);
                     LOW_LOG
-						std::cout << Fac_Name << " has gone West and is at " << Fac_Selected_Force_Location <<"\n";
+						std::cout << Fac_Name << " has gone West and is at " << Selected_Force_Location <<"\n";
                     END_LOG
                 }
                 break;
@@ -238,6 +238,50 @@ struct FACTION
     ///////////////////////////////////////////////////////////
 
 
+	Co_Ordinates Get_Adjacent_Tile ( Direction  Where_to_captain )
+	{
+		Co_Ordinates current_co_ords = Int_To_Co_Ordinates(Selected_Force_Location);
+
+		switch (Where_to_captain)
+		{
+			case North:
+				if (current_co_ords.Y < WORLD_HEIGHT-1)
+				{
+					current_co_ords.Y++;
+					return current_co_ords;
+				}
+				break;
+
+			case East:
+				if (current_co_ords.X < WORLD_WIDTH-1)
+				{
+					current_co_ords.X++;
+					return current_co_ords;
+				}
+				break;
+
+			case South:
+				if (current_co_ords.Y > 0)
+				{
+					current_co_ords.Y--;
+					return current_co_ords;
+				}
+				break;
+
+			case West:
+				if (current_co_ords.X > 0)
+				{
+					current_co_ords.X--;
+					return current_co_ords;
+				}
+				break;
+			
+			default:
+				return Int_To_Co_Ordinates(-1);	//invalid
+				break;
+		}
+	}
+
 
 	/////////// 	"How much Memory are we using?"	///////////
     // Must be updated
@@ -249,7 +293,7 @@ struct FACTION
 
         printf("\nFac_Name:\t\t\t%d bytes",                     sizeof(Fac_Name)                        );
         printf("\nCallsign:\t\t\t%d bytes",                		sizeof(Callsign)                   		);
-        printf("\nFac_Selected_Force_Location:\t%d bytes",      sizeof(Fac_Selected_Force_Location)     );
+        printf("\nSelected_Force_Location:\t%d bytes",      	sizeof(Selected_Force_Location)     );
         printf("\nFac_Home_Location:\t\t%d bytes",              sizeof(Fac_Home_Location)               );
         printf("\nHeart Thread pointer:\t\t%d bytes",         	sizeof(HEART_ptr)                   	);
         printf("\nCurrent status:\t\t\t%d bytes",               sizeof(Current_Status)                  );
@@ -260,7 +304,7 @@ struct FACTION
         
         uS add =  	sizeof(Fac_Name)
 				+	sizeof(Callsign)
-				+	sizeof(Fac_Selected_Force_Location)
+				+	sizeof(Selected_Force_Location)
 				+	sizeof(Fac_Home_Location)
 				+	sizeof(HEART_ptr)
 				+	sizeof(Current_Status)
@@ -308,7 +352,7 @@ struct FACTION
 
 	void TAKE_A_BREAK(uS miliseconds)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(miliseconds));
+		NAP(miliseconds*SECONDS_PER_SECOND);
 	}
 };
 
