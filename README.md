@@ -5,4 +5,4 @@ This should be done by splitting the code into 3 distinct sections:
     2: The API, 
     3: The Front-end. 
 
-Both the Frontend and Backend should be capable of being made with any language
+Both the Frontend and Backend should be capable of being made with any language... or video game engine
