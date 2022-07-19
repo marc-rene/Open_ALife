@@ -3,19 +3,49 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-#include <filesystem>
+#include <vector>
+#include <thread>
+
+char        MINT_CONFIG_FILE_PATH[1024] = "../../../../API/config.mints";
+char        FAC_CONFIG_FILE_PATH[1024] = "../../../../API/Faction.fucc";
 
 
-#define         	MINT_CONFIG_FILE_PATH       	"../../../../API/config.mints"
-//#define         	FAC_CONFIG_FILE_PATH       		"Faction.fucks"
-
-
-
-unsigned _int8  WORLD_WIDTH;
-unsigned _int8  WORLD_HEIGHT;
-unsigned short  WORLD_SIZE;
 static unsigned int times_rendered = 0;
 
+//copied from main_settings.h
+
+//	The military structure of a faction could be organised in 3 distinct ways...
+//		1.	Disorganised: 	This would be your Bandits and Mercenaries... No central planning at all.
+//
+//		2.	Migrant:		This would be your Roma and wildlife, if we ever wanted to make them a faction...
+//							these people move constantly to empty spots only
+//
+//		3.	Organised:		Normal Military as we've come to know them, has central planning 
+
+enum	Faction_Structure { Disorganised, Migrant, Organised };
+
+
+
+// 	They're up here to make them publicly accessable from now on
+enum Climates { Cold = 'C', Mild = 'M', Hot = 'H' };
+enum Storms { Blizzard, Terrential_Rain, Heatwave, Emmission };
+//	We'll be seeing this mostly in World.h
+
+
+/////// 	  Now we getting into some... Undefined stuff...		//////
+unsigned _int8  							HOW_MANY_FACTIONS;			//
+unsigned _int8   							WORLD_WIDTH;				//
+unsigned _int8   							WORLD_HEIGHT;				//
+unsigned _int8								Random_Strength_Range_MAX;	//
+unsigned _int8								Random_Strength_Range_MIN;	//
+unsigned short 								WORLD_SIZE;					//
+std::vector<std::string>        			Faction_Names;   			//
+std::vector<std::string>					Faction_Initials;  			//
+std::vector<unsigned short>        			Faction_Homes; 				//
+std::vector<unsigned short>					Starting_Strengths;			//
+std::vector<bool>							Essential_List;				//
+std::vector<Faction_Structure>				Faction_Structures;			//
+//   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -  //
 
 
 
@@ -25,6 +55,9 @@ namespace Faction_Fight_UI
 
     static unsigned __int8 WORLD_WIDTH;
     bool    alread_read_mints = false;
+    bool    alread_read_fuccs = false;
+    bool    found_mints = false;
+    bool    found_fuccs = false;
     static bool show_app_metrics = false;
     static bool show_app_stack_tool = false;
     static bool show_app_style_editor = false;
@@ -65,10 +98,11 @@ namespace Faction_Fight_UI
     
 
 
-    void get_set_ints_from_config(bool* read)
+    void get_set_ints_from_config(bool* read_mint_already, bool* status)
     {
-        if (*read == false)
+        if (*read_mint_already == false)
         {
+            *status = false;
             printf("\nOpening and reading .mints file!\n");
 
 
@@ -96,28 +130,27 @@ namespace Faction_Fight_UI
             if (!config)
             {
 
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     if (config)
                     {
+                        *status = true;
                         break; // yay! it worked 
                     }
                     else
                     {
                         printf("\nAh fiddlestciks! We couldn't open the mints file \ntrying to open file again! \nWish us luck");
-                        //system("dir ..\\..\\..\\..\\ ");
+                        *status = false;
                         config.open(MINT_CONFIG_FILE_PATH);
-
                     }//end else
-
-
                 }//end child if
 
-
-                if (!config) 	// is it still not working??? 
+                if (!config)
                 {
-                    exit(4);
-                }//end child if					
+                    *status = false;
+                    *read_mint_already = true;
+                    return;
+                }
 
             }// end file check... hope it worked																										
 
@@ -138,31 +171,58 @@ namespace Faction_Fight_UI
                         we be setting?		*/
                     switch (next_var)
                     {
+                        case how_many_factions:
+                            HOW_MANY_FACTIONS = (unsigned _int8)stoi(temp_string);
+                            extract_next_line = false;
+                            printf("Read Faction count\n");
+                            break;
 
-                    case world_width:
-                        WORLD_WIDTH = (unsigned _int8)stoi(temp_string);
-                        extract_next_line = false;
-                        break;
+                        case rand_strength_range_max:
+                            Random_Strength_Range_MAX = (unsigned _int8)stoi(temp_string);
+                            extract_next_line = false;
+                            printf("Read strength range max\n");
+                            break;
+
+                        case rand_strength_range_min:
+                            Random_Strength_Range_MIN = (unsigned _int8)stoi(temp_string);
+                            extract_next_line = false;
+                            printf("Read strength range min\n");
+                            break;
 
 
-                    case world_height:
-                        WORLD_HEIGHT = (unsigned _int8)stoi(temp_string);
-                        extract_next_line = false;
-                        break;
+                        case e_Log_Level:
+                            extract_next_line = false;
+                            printf("Read log level\n");
+                            break;
 
 
-                    default:
-                        printf("\nERROR IN get_set_ints_from_config SWITCH PART");
-                        break;
+                        case world_width:
+                            WORLD_WIDTH = (unsigned _int8)stoi(temp_string);
+                            extract_next_line = false;
+                            printf("Read width\n");
+                            break;
 
-                    }//end switch																				
+
+                        case world_height:
+                            WORLD_HEIGHT = (unsigned _int8)stoi(temp_string);
+                            extract_next_line = false;
+                            printf("Read height\n");
+                            break;
+
+
+
+                        default:
+                            //printf("\nERROR IN get_set_ints_from_config SWITCH PART");
+                            break;
+
+                    }//end switch																					
 
                 }//end if-line extraction																		
 
 
 
                 //	check to see if it's a comment first														
-                if (temp_string[0] == '#')
+                if (temp_string[0] == '#' || temp_string[0] == '\0' || temp_string[0] == '\n')
                 {
                     continue;
                 }
@@ -171,6 +231,20 @@ namespace Faction_Fight_UI
                 //	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	//			
                 //								HAVE WE FOUND SOMETHING?							//			
                 //	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	
+
+                else if (temp_string.find("[FACTION COUNT]") != std::string::npos)
+                {
+                    next_var = how_many_factions;
+                    extract_next_line = true;	// Start extraction									
+                }
+
+
+                else if (temp_string.find("[LOG LEVEL]") != std::string::npos)
+                {
+                    next_var = e_Log_Level;
+                    extract_next_line = true;
+                }
+
 
                 else if (temp_string.find("[WORLD WIDTH]") != std::string::npos)
                 {
@@ -185,15 +259,257 @@ namespace Faction_Fight_UI
                     extract_next_line = true;
                 }
 
+                else if (temp_string.find("[RANDOM STRENGTH RANGE MAX]") != std::string::npos)
+                {
+                    next_var = rand_strength_range_max;
+                    extract_next_line = true;
+                }
+
+                else if (temp_string.find("[RANDOM STRENGTH RANGE MIN]") != std::string::npos)
+                {
+                    next_var = rand_strength_range_min;
+                    extract_next_line = true;
+                }
+
+                else if (temp_string.find("[USE HIGH PERFORMANCE MODE? 0 or 1]") != std::string::npos)
+                {
+                    next_var = performance_mode;
+                    extract_next_line = true;
+                }
+
+                else if (temp_string.find("[SPEED DIVIDER]") != std::string::npos)
+                {
+                    next_var = speed_divider;
+                    extract_next_line = true;
+                }
+
             }//end while																						
 
 
             config.close();
 
-            *read = true;
+            *status = true;
+            *read_mint_already = true;
             WORLD_SIZE = WORLD_HEIGHT * WORLD_WIDTH;
-
         }
+    }
+
+
+
+    void get_set_fac_details_from_config(bool* local_read_fucc_already, bool* success)
+    {
+        if (*local_read_fucc_already == false)
+        {
+            printf("\nOpening Fucc file");
+            unsigned _int8 counter = 0; //DEBUG ONLY
+
+            std::ifstream   config(FAC_CONFIG_FILE_PATH);    //  find and open the faction config file											
+            std::string     temp_string;
+            bool start_extraction = false;
+
+            if (!config)
+            {
+                for (unsigned _int8 i = 0; i < 10; i++)
+                {
+                    if (config)
+                    {
+                        *success = true;
+                        break; // yay! it worked 
+                    }
+                    else
+                    {
+                        //printf("\nAh fiddlestciks! We couldn't open the fuccs file \ntrying to open file again! \nWish us luck");
+                        //printf("\nCHECK MAIN_SETTINGS.h AND SEE IF THE RELATIVE PATHS ARE CORRECT... Visual Studio and VSCode cause Tomfoolery here!!!");
+                        config.open(FAC_CONFIG_FILE_PATH);
+                    }//end else
+
+                }//end child if
+
+
+                if (!config) 	// is it still not working??? 
+                {
+                    printf("\nWE STILL CANT OPEN OR FIND THE FUCCS!!! \n");
+					*success = false;
+                }//end child if					
+
+            }// end file check... hope it worked
+            else
+            {
+                *success = true;
+            }
+          
+
+            //extraction of file... if its found
+            if (*success == true)
+            {
+
+                while (std::getline(config, temp_string))
+                {
+                    // 	Is the line line a comment?																										
+                    if (temp_string[0] == '#')
+                    {
+                        continue;
+                    }
+
+                    //	Have we reached the end																									
+                    else if (temp_string.find("[END]") != std::string::npos)
+                    {
+                        break;
+                    }
+
+                    //	the Go-ahead been given, we've read START READ																																
+                    else if (start_extraction)
+                    {
+                        counter++;
+
+                        unsigned short div_indexs[5];
+                        unsigned _int8 stage = 0;
+                        temp_string.erase(remove(temp_string.begin(), temp_string.end(), '\t'), temp_string.end());	// get rid of tabs
+
+                        //check for | first and figure out where they are																				
+                        for (unsigned short i = 0; i < temp_string.length(); i++)
+                        {
+                            if (temp_string[i] == '|')
+                            {
+                                div_indexs[stage] = i;
+                                stage++;
+                            }
+                        }//end for																														
+
+
+
+                        /*	Faction Names, Insignias, Faction Homes, Starting Strength, Faction Structures	*/
+                        // 	the name will be the first thing we find, add that first...																													
+                        Faction_Names.push_back(temp_string.substr(0, div_indexs[0]));
+
+
+                        //callsign	
+                        Faction_Initials.push_back(temp_string.substr((div_indexs[0] + 1), (div_indexs[1] - div_indexs[0]) - 1));
+
+
+                        //home
+                        unsigned short temp_home;
+
+                        if (temp_string.find("Random Home") != std::string::npos)
+                        {
+                            unsigned short counter = 0;
+                            bool unclean = true;
+                            bool change_needed;
+
+                            do
+                            {
+                                change_needed = false;
+
+                                if (counter > 200)
+                                {
+                                    for (unsigned short x = WORLD_SIZE - 1; x >= 0; x--)
+                                    {
+                                        for (unsigned short y = 0; y < HOW_MANY_FACTIONS; y++)
+                                        {
+                                            if (x == Faction_Homes[y])
+                                            {
+                                                continue;
+                                            }
+                                            else
+                                            {
+                                                temp_home = x;
+                                                unclean = false;
+                                                change_needed = false;
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                }
+                                else if (counter > 50)
+                                {
+                                    temp_home = Faction_Homes.at(rand() % (HOW_MANY_FACTIONS / 2)) - (rand() % 3) + 1;
+                                    printf("\nLOOP ERROR %d times", counter);
+                                }
+                                else
+                                {
+                                    temp_home = rand() % WORLD_SIZE;
+                                }
+
+                                for (unsigned short i = 0; i < HOW_MANY_FACTIONS; i++)
+                                {
+                                    if (temp_home == Faction_Homes[i])
+                                    {
+                                        change_needed = true;
+                                        break;
+                                    }
+                                }//end for
+
+                                if (!change_needed)
+                                {
+                                    unclean = false;
+                                }
+
+                                counter++;
+                            }//end do
+                            while (unclean);
+
+                        }//end if
+
+                        else
+                        {
+                            std::string temp_home_s = temp_string.substr((div_indexs[1] + 1), (div_indexs[2] - div_indexs[1]) - 1); //the plus 1's are her
+                            temp_home = (unsigned short)stol(temp_home_s);
+                        }
+                        Faction_Homes.push_back(temp_home);
+
+
+                        //strength
+                        unsigned _int8 temp_STRNTH;
+
+                        if (temp_string.find("Random Strength") != std::string::npos)
+                        {
+                            temp_STRNTH = Random_Strength_Range_MIN + (rand() % (Random_Strength_Range_MAX - Random_Strength_Range_MIN));
+                        }
+                        else
+                        {
+                            std::string temp_STRNTH_s = temp_string.substr((div_indexs[2] + 1), (div_indexs[3] - div_indexs[2]) - 1);
+                            temp_STRNTH = (unsigned _int8)stol(temp_STRNTH_s);
+                        }
+
+                        Starting_Strengths.push_back(temp_STRNTH);
+
+
+                        ////		Time to set up our Faction structures		////															
+                        if (temp_string.find("~Disorganised") != std::string::npos)
+                        {
+                            Faction_Structures.push_back(Disorganised);
+                        }
+
+                        else if (temp_string.find("~Organised") != std::string::npos)
+                        {
+                            Faction_Structures.push_back(Organised);
+                        }
+
+                        else if (temp_string.find("~Migrant") != std::string::npos)
+                        {
+                            Faction_Structures.push_back(Migrant);
+                        }
+
+
+                    }//end extraction																													
+
+
+
+                    /*		Start Extracting Data once we read the go ahead! 	*/
+                    else if (temp_string.find("[START READ]") != std::string::npos)
+                    {
+                        start_extraction = true;
+                    }
+
+                }
+            }
+
+
+            *local_read_fucc_already = true;
+            config.close();
+        }
+
     }
 
 
@@ -298,13 +614,8 @@ namespace Faction_Fight_UI
 
         ShowDockSpace();
 
-        get_set_ints_from_config(&alread_read_mints);
-
-        if (times_rendered > 5000)
-        {
-            times_rendered = 0;
-            alread_read_mints = false;
-        }
+        get_set_ints_from_config(&alread_read_mints, &found_mints);
+        get_set_fac_details_from_config(&alread_read_fuccs, &found_fuccs);
 
         ImGuiWindowFlags Main_Window_Flags = 0;
 
@@ -344,12 +655,86 @@ namespace Faction_Fight_UI
         }
 
 
-        static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
                                         
 
-        ImGui::Text("Hello! Your width and height is %d and %d", WORLD_WIDTH, WORLD_HEIGHT);
+        static ImGuiInputTextFlags text_flags = !ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CtrlEnterForNewLine | !ImGuiInputTextFlags_ReadOnly;
+        ImGui::CheckboxFlags("Read-only the file paths? ", &text_flags, ImGuiInputTextFlags_ReadOnly);
+        ImGui::Text("We are reading all details from the following:");
+
+        ImGui::InputText(".mints config file", MINT_CONFIG_FILE_PATH, 1024, text_flags);
+		ImGui::SameLine();
+		if (ImGui::Button("Reset to default path"))
+		{
+			printf("\nmint button pressed");
+			char default_path[32] = "../../../../API/config.mints\0";
+			for (unsigned _int8 i = 0; i < 32; i++)
+			{
+				MINT_CONFIG_FILE_PATH[i] = default_path[i];
+			}
+		}
+
+		ImGui::InputText(".fuccs Factions file", FAC_CONFIG_FILE_PATH, 1024, text_flags);
+		ImGui::SameLine();
+		if (ImGui::Button("Reset to default path ###"))
+		{
+			printf("\nfucc button pressed");
+			char default_path[32] = "../../../../API/Faction.fucc\0";
+			for (unsigned _int8 i = 0; i < 32; i++)
+			{
+				FAC_CONFIG_FILE_PATH[i] = default_path[i];
+			}
+		}
 
 
+		
+        if (ImGui::Button("Rescan for .mints"))
+        {
+            alread_read_mints = false;
+            found_mints = false;
+            get_set_ints_from_config(&alread_read_mints, &found_mints);
+        }
+		ImGui::SameLine();
+		if (found_mints)
+		{
+			ImGui::Text("Reading World Parametres from %s", MINT_CONFIG_FILE_PATH);
+		}
+		else
+		{
+			ImGui::TextColored(ImVec4(1.0f, 0.1f, 0.1f, 1.0f), "WE CANT FIND THOSE DAMN MINTS! MAKE SURE THE .MINTS PATH IS CORRECT");
+		}
+
+
+
+        if (ImGui::Button("Rescan for .fucc"))
+        {
+            Faction_Names.clear();
+			Faction_Initials.clear();
+			Faction_Homes.clear();
+			Starting_Strengths.clear();
+			Essential_List.clear();
+			Faction_Structures.clear();
+
+            alread_read_fuccs = false;
+            found_fuccs = false;
+            get_set_fac_details_from_config(&alread_read_fuccs, &found_fuccs);
+        }
+		ImGui::SameLine();
+		if (found_fuccs)
+		{
+			ImGui::Text("Reading Faction Details from %s", FAC_CONFIG_FILE_PATH);
+		}
+		else
+		{
+			ImGui::TextColored(ImVec4(1.0f, 0.1f, 0.1f, 1.0f), "WE CANT FIND THOSE DAMN FUCCS! MAKE SURE THE .FUCC PATH IS CORRECT");
+		}
+
+
+		ImGui::Separator();
+
+		ImGui::Text("Hello! Your world width and height is %d and %d", WORLD_WIDTH, WORLD_HEIGHT);
+
+
+        static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
         static ImVec2 cell_padding(3.0f, 6.0f);
         static bool show_widget_frame_bg = true;
 
