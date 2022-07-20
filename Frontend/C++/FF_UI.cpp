@@ -6,6 +6,9 @@
 #include <vector>
 #include <thread>
 
+#define DANGER_COLOUR ImVec4(1.0f, 0.23f, 0.23f, 1.0f)
+#define WARNING_COLOUR ImVec4(1.0f, 0.6f, 0.0f, 1.0f)
+
 char        MINT_CONFIG_FILE_PATH[1024] = "../../../../API/config.mints";
 char        FAC_CONFIG_FILE_PATH[1024] = "../../../../API/Faction.fucc";
 
@@ -33,12 +36,13 @@ enum Storms { Blizzard, Terrential_Rain, Heatwave, Emmission };
 
 
 /////// 	  Now we getting into some... Undefined stuff...		//////
-unsigned _int8  							HOW_MANY_FACTIONS;			//
-unsigned _int8   							WORLD_WIDTH;				//
-unsigned _int8   							WORLD_HEIGHT;				//
+unsigned _int8  							HOW_MANY_FACTIONS = 1;		//
+unsigned _int8   							WORLD_WIDTH = 5;			//
+unsigned _int8   							WORLD_HEIGHT = 5;			//
 unsigned _int8								Random_Strength_Range_MAX;	//
 unsigned _int8								Random_Strength_Range_MIN;	//
-unsigned short 								WORLD_SIZE;					//
+unsigned short 								WORLD_SIZE = 25;			//
+bool										High_Performance_Mode;		//
 std::vector<std::string>        			Faction_Names;   			//
 std::vector<std::string>					Faction_Initials;  			//
 std::vector<unsigned short>        			Faction_Homes; 				//
@@ -48,6 +52,20 @@ std::vector<Faction_Structure>				Faction_Structures;			//
 //   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -  //
 
 
+/* Thank you https ://rextester.com/SLYX81102 */
+std::string execute(std::string cmd)
+{
+    std::string file_name = "CMD_READ.txt";
+    std::system((cmd + " > " + file_name).c_str()); // redirect output to file
+
+    // open file for input, return string containing characters in the file
+    std::ifstream file(file_name);
+
+    return
+    {
+        std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()
+    };
+}
 
 
 namespace Faction_Fight_UI
@@ -201,6 +219,12 @@ namespace Faction_Fight_UI
                             extract_next_line = false;
                             printf("Read width\n");
                             break;
+
+						case performance_mode:
+							High_Performance_Mode = stoi(temp_string);
+							extract_next_line = false;
+							printf("Read Performance Mode\n");
+							break;
 
 
                         case world_height:
@@ -620,12 +644,12 @@ namespace Faction_Fight_UI
         ImGuiWindowFlags Main_Window_Flags = 0;
 
         if (true)       Main_Window_Flags |= ImGuiWindowFlags_MenuBar;
-        
 
 
-        if (show_app_metrics)       { ImGui::ShowMetricsWindow(&show_app_metrics); }
-        if (show_app_stack_tool)    { ImGui::ShowStackToolWindow(&show_app_stack_tool); }
-        if (show_app_about)         { ImGui::ShowAboutWindow(&show_app_about); }
+
+        if (show_app_metrics) { ImGui::ShowMetricsWindow(&show_app_metrics); }
+        if (show_app_stack_tool) { ImGui::ShowStackToolWindow(&show_app_stack_tool); }
+        if (show_app_about) { ImGui::ShowAboutWindow(&show_app_about); }
 
         if (show_app_style_editor)
         {
@@ -655,83 +679,107 @@ namespace Faction_Fight_UI
         }
 
 
-                                        
+
 
         static ImGuiInputTextFlags text_flags = !ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CtrlEnterForNewLine | !ImGuiInputTextFlags_ReadOnly;
         ImGui::CheckboxFlags("Read-only the file paths? ", &text_flags, ImGuiInputTextFlags_ReadOnly);
         ImGui::Text("We are reading all details from the following:");
 
         ImGui::InputText(".mints config file", MINT_CONFIG_FILE_PATH, 1024, text_flags);
-		ImGui::SameLine();
-		if (ImGui::Button("Reset to default path"))
-		{
-			printf("\nmint button pressed");
-			char default_path[32] = "../../../../API/config.mints\0";
-			for (unsigned _int8 i = 0; i < 32; i++)
-			{
-				MINT_CONFIG_FILE_PATH[i] = default_path[i];
-			}
-		}
+        ImGui::SameLine();
+        if (ImGui::Button("Reset to default path"))
+        {
+            printf("\nmint button pressed");
+            char default_path[32] = "../../../../API/config.mints\0";
+            for (unsigned _int8 i = 0; i < 32; i++)
+            {
+                MINT_CONFIG_FILE_PATH[i] = default_path[i];
+            }
+        }
 
-		ImGui::InputText(".fuccs Factions file", FAC_CONFIG_FILE_PATH, 1024, text_flags);
-		ImGui::SameLine();
-		if (ImGui::Button("Reset to default path ###"))
-		{
-			printf("\nfucc button pressed");
-			char default_path[32] = "../../../../API/Faction.fucc\0";
-			for (unsigned _int8 i = 0; i < 32; i++)
-			{
-				FAC_CONFIG_FILE_PATH[i] = default_path[i];
-			}
-		}
+        ImGui::InputText(".fuccs Factions file", FAC_CONFIG_FILE_PATH, 1024, text_flags);
+        ImGui::SameLine();
+        if (ImGui::Button("Reset to default path ###"))
+        {
+            printf("\nfucc button pressed");
+            char default_path[32] = "../../../../API/Faction.fucc\0";
+            for (unsigned _int8 i = 0; i < 32; i++)
+            {
+                FAC_CONFIG_FILE_PATH[i] = default_path[i];
+            }
+        }
 
 
-		
+
         if (ImGui::Button("Rescan for .mints"))
         {
             alread_read_mints = false;
             found_mints = false;
             get_set_ints_from_config(&alread_read_mints, &found_mints);
         }
-		ImGui::SameLine();
-		if (found_mints)
-		{
-			ImGui::Text("Reading World Parametres from %s", MINT_CONFIG_FILE_PATH);
-		}
-		else
-		{
-			ImGui::TextColored(ImVec4(1.0f, 0.1f, 0.1f, 1.0f), "WE CANT FIND THOSE DAMN MINTS! MAKE SURE THE .MINTS PATH IS CORRECT");
-		}
+        ImGui::SameLine();
+        if (found_mints)
+        {
+            ImGui::Text("Reading World Parametres from %s", MINT_CONFIG_FILE_PATH);
+        }
+        else
+        {
+            ImGui::TextColored(DANGER_COLOUR, "WE CANT FIND THOSE DAMN MINTS! MAKE SURE THE .MINTS PATH IS CORRECT");
+        }
 
 
 
         if (ImGui::Button("Rescan for .fucc"))
         {
             Faction_Names.clear();
-			Faction_Initials.clear();
-			Faction_Homes.clear();
-			Starting_Strengths.clear();
-			Essential_List.clear();
-			Faction_Structures.clear();
+            Faction_Initials.clear();
+            Faction_Homes.clear();
+            Starting_Strengths.clear();
+            Essential_List.clear();
+            Faction_Structures.clear();
 
             alread_read_fuccs = false;
             found_fuccs = false;
             get_set_fac_details_from_config(&alread_read_fuccs, &found_fuccs);
         }
-		ImGui::SameLine();
-		if (found_fuccs)
-		{
-			ImGui::Text("Reading Faction Details from %s", FAC_CONFIG_FILE_PATH);
-		}
-		else
-		{
-			ImGui::TextColored(ImVec4(1.0f, 0.1f, 0.1f, 1.0f), "WE CANT FIND THOSE DAMN FUCCS! MAKE SURE THE .FUCC PATH IS CORRECT");
-		}
+        ImGui::SameLine();
+        if (found_fuccs)
+        {
+            ImGui::Text("Reading Faction Details from %s", FAC_CONFIG_FILE_PATH);
+        }
+        else
+        {
+            ImGui::TextColored(DANGER_COLOUR, "WE CANT FIND THOSE DAMN FUCCS! MAKE SURE THE .FUCC PATH IS CORRECT");
+        }
 
 
-		ImGui::Separator();
+        ImGui::Separator();
 
-		ImGui::Text("Hello! Your world width and height is %d and %d", WORLD_WIDTH, WORLD_HEIGHT);
+        ImGui::Text("Details are as follows:");
+
+        ImGui::BulletText("CWD is ");
+        ImGui::SameLine();
+        
+        ImGui::Text(execute("cd ").c_str() );
+
+        if (found_mints)
+        {
+            ImGui::BulletText("World Width, World Height\t: %d, %d", WORLD_WIDTH, WORLD_HEIGHT);
+            ImGui::BulletText("Number of Active Factions\t: %d", HOW_MANY_FACTIONS);
+            if (High_Performance_Mode)
+            {
+                ImGui::BulletText("Performance Mode\t\t\t : FAST MODE");
+            }
+            else
+            {
+                ImGui::BulletText("Performance Mode\t\t\t : Power Saver Mode");
+            }
+        }
+        else
+        {
+            ImGui::TextColored(WARNING_COLOUR, "Please make sure that your .mint file has been found!");
+        }
+
 
 
         static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
@@ -741,24 +789,27 @@ namespace Faction_Fight_UI
         ImGui::SliderFloat2("CellPadding", &cell_padding.x, 0.0f, 10.0f, "%.0f");
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
 
-        if (ImGui::BeginTable("table1", WORLD_WIDTH, flags))
+        if (found_mints)
         {
-            unsigned short index = 0;
-
-            for (int row = 0; row < WORLD_HEIGHT; row++)
+            if (ImGui::BeginTable("table1", WORLD_WIDTH, flags))
             {
-                ImGui::TableNextRow();
-                for (int column = 0; column < WORLD_WIDTH; column++)
+                unsigned short index = 0;
+
+                for (int row = 0; row < WORLD_HEIGHT; row++)
                 {
-                    ImGui::TableSetColumnIndex(column);
-                    ImU32 cell_bg_color = ImGui::GetColorU32(ImVec4(0.3f, 0.3f, 0.7f, 0.65f));
-                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, cell_bg_color);
-                    
-                    ImGui::Text("%d,%d = %d", Int_To_Co_Ordinates(index).X, Int_To_Co_Ordinates(index).Y, index);
-                    index++;
+                    ImGui::TableNextRow();
+                    for (int column = 0; column < WORLD_WIDTH; column++)
+                    {
+                        ImGui::TableSetColumnIndex(column);
+                        ImU32 cell_bg_color = ImGui::GetColorU32(ImVec4(0.3f, 0.3f, 0.7f, 0.65f));
+                        ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, cell_bg_color);
+
+                        ImGui::Text("%d,%d = %d", Int_To_Co_Ordinates(index).X, Int_To_Co_Ordinates(index).Y, index);
+                        index++;
+                    }
                 }
+                ImGui::EndTable();
             }
-            ImGui::EndTable();
         }
 
 
