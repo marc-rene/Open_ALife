@@ -1,4 +1,4 @@
-#this line should be completely ignored, which it is in testing ;D
+!!! This is a MINT file !!!
 
 #this value is for determining how many factions you want to be initialised
 [FACTION COUNT]
@@ -34,4 +34,4 @@
 15
 
 [WORLD HEIGHT]
-12
+20
