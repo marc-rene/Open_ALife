@@ -1,16 +1,134 @@
 #include "FF_UI.h"
 #include "imgui.h"
 #include <string>
-#include <iostream>
-#include <fstream>
 #include <vector>
 #include <thread>
+#include "File.h"
 
 #define DANGER_COLOUR ImVec4(1.0f, 0.23f, 0.23f, 1.0f)
 #define WARNING_COLOUR ImVec4(1.0f, 0.6f, 0.0f, 1.0f)
+#define SUCCESS_COLOUR ImVec4(0.31f, 0.85f, 0.01f, 1.00f)
 
-char        MINT_CONFIG_FILE_PATH[1024] = "../../../../API/config.mints";
-char        FAC_CONFIG_FILE_PATH[1024] = "../../../../API/Faction.fucc";
+#define FILE_PATH_BUFFER_SIZE 2048
+
+std::wstring temp_Wstring;
+
+char        MINT_CONFIG_FILE_PATH[FILE_PATH_BUFFER_SIZE] = "../../../../API/config.mints";
+char        FAC_CONFIG_FILE_PATH[FILE_PATH_BUFFER_SIZE] = "../../../../API/Faction.fucc";
+
+
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+{
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED |
+        COINIT_DISABLE_OLE1DDE);
+    if (SUCCEEDED(hr))
+    {
+        IFileOpenDialog* pFileOpen;
+
+        // Create the FileOpenDialog object.
+        hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL,
+            IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
+
+        if (SUCCEEDED(hr))
+        {
+            // Show the Open dialog box.
+            hr = pFileOpen->Show(NULL);
+
+            // Get the file name from the dialog box.
+            if (SUCCEEDED(hr))
+            {
+                IShellItem* pItem;
+                hr = pFileOpen->GetResult(&pItem);
+                if (SUCCEEDED(hr))
+                {
+                    PWSTR pszFilePath;
+                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+
+                    // Display the file name to the user.
+                    if (SUCCEEDED(hr))
+                    {
+                        temp_Wstring.erase();
+                        temp_Wstring.clear();
+
+                        temp_Wstring = pszFilePath;
+                        //MessageBoxW(NULL, *str_save_to, L"File Path", MB_OK);
+
+                        CoTaskMemFree(pszFilePath);
+
+
+                    }
+                    pItem->Release();
+                }
+            }
+            pFileOpen->Release();
+        }
+        CoUninitialize();
+    }
+    return 0;
+}
+
+
+
+
+
+bool verify_file_type(bool TcheckMint__FcheckFucc)
+{
+    std::string		    temp_string_for_check;
+
+    if (TcheckMint__FcheckFucc == true)
+    {
+        std::ifstream   file_check(MINT_CONFIG_FILE_PATH);
+        std::getline(file_check, temp_string_for_check);
+
+        if (!file_check)
+        {
+            printf("\nThe File verification check failed... couldnt open file");
+            return false;
+        }
+
+        if (temp_string_for_check.find("!!! This is a MINT file !!!") != std::string::npos)
+        {
+            printf("\nWe checked a mint file and it was successfully verified");
+            return true;
+        }
+        else
+        {
+            printf("\nWe checked a mint file and it failed verification");
+            return false;
+        }
+    }//end if
+
+
+    else
+    {
+        std::ifstream   file_check(FAC_CONFIG_FILE_PATH);
+        std::getline(file_check, temp_string_for_check);
+
+        if (!file_check)
+        {
+            printf("\nThe File verification check failed... couldnt open file");
+            return false;
+        }
+
+        if (temp_string_for_check.find("!!! This is a FACTION file !!!") != std::string::npos)
+        {
+            printf("\nWe checked a Fucc file and it was successfully verified");
+            return true;
+        }
+        else
+        {
+            printf("\nWe checked a Fucc file and it failed verification");
+            return false;
+        }
+    }//end else
+}//end file verify
+
+
+
+
+
+
 
 
 static unsigned int times_rendered = 0;
@@ -52,20 +170,6 @@ std::vector<Faction_Structure>				Faction_Structures;			//
 //   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -  //
 
 
-/* Thank you https ://rextester.com/SLYX81102 */
-std::string execute(std::string cmd)
-{
-    std::string file_name = "CMD_READ.txt";
-    std::system((cmd + " > " + file_name).c_str()); // redirect output to file
-
-    // open file for input, return string containing characters in the file
-    std::ifstream file(file_name);
-
-    return
-    {
-        std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()
-    };
-}
 
 
 namespace Faction_Fight_UI
@@ -76,6 +180,8 @@ namespace Faction_Fight_UI
     bool    alread_read_fuccs = false;
     bool    found_mints = false;
     bool    found_fuccs = false;
+    bool    verified_mints = false;
+    bool    verified_fuccs = false;
     static bool show_app_metrics = false;
     static bool show_app_stack_tool = false;
     static bool show_app_style_editor = false;
@@ -147,29 +253,10 @@ namespace Faction_Fight_UI
             /*	Oh god hope that the file works and is valid?	*/
             if (!config)
             {
-
-                for (int i = 0; i < 5; i++)
-                {
-                    if (config)
-                    {
-                        *status = true;
-                        break; // yay! it worked 
-                    }
-                    else
-                    {
-                        printf("\nAh fiddlestciks! We couldn't open the mints file \ntrying to open file again! \nWish us luck");
-                        *status = false;
-                        config.open(MINT_CONFIG_FILE_PATH);
-                    }//end else
-                }//end child if
-
-                if (!config)
-                {
-                    *status = false;
-                    *read_mint_already = true;
-                    return;
-                }
-
+                printf("\nAh fiddlestciks! We couldn't open the mints file");
+                *status = false;
+                *read_mint_already = true;
+                return;
             }// end file check... hope it worked																										
 
 
@@ -540,27 +627,12 @@ namespace Faction_Fight_UI
 
     void ShowDockSpace()
     {
-        // If you strip some features of, this demo is pretty much equivalent to calling DockSpaceOverViewport()!
-        // In most cases you should be able to just call DockSpaceOverViewport() and ignore all the code below!
-        // In this specific demo, we are not using DockSpaceOverViewport() because:
-        // - we allow the host window to be floating/moveable instead of filling the viewport (when opt_fullscreen == false)
-        // - we allow the host window to have padding (when opt_padding == true)
-        // - we have a local menu bar in the host window (vs. you could use BeginMainMenuBar() + DockSpaceOverViewport() in your code!)
-        // TL;DR; this demo is more complicated than what you would normally use.
-        // If we removed all the options we are showcasing, this demo would become:
-        //     void ShowExampleAppDockSpace()
-        //     {
-        //         ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
-        //     }
-
         static bool opt_fullscreen = true;
         static bool opt_padding = false;
         static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
-        // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
-        // because it would be confusing to have two docking targets within each others.
-        //ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar;
+
         if (opt_fullscreen)
         {
             const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -577,19 +649,15 @@ namespace Faction_Fight_UI
             dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
         }
 
-        // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
-        // and handle the pass-thru hole, so we ask Begin() to not render a background.
         if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
             window_flags |= ImGuiWindowFlags_NoBackground;
 
-        // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
-        // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
-        // all active windows docked into it will lose their parent and become undocked.
-        // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
-        // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
+
         if (!opt_padding)
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
         ImGui::Begin("DockSpace Demo", &opt_fullscreen, window_flags);
+
         if (!opt_padding)
             ImGui::PopStyleVar();
 
@@ -621,13 +689,13 @@ namespace Faction_Fight_UI
     {
         times_rendered++;
 
+        //ImGui::ShowDemoWindow();
 
         static bool opt_fullscreen = true;
         static bool opt_padding = false;
         static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
-        // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
-        // because it would be confusing to have two docking targets within each others.
+
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
         if (opt_fullscreen)
         {
@@ -645,19 +713,15 @@ namespace Faction_Fight_UI
             dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
         }
 
-        // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
-        // and handle the pass-thru hole, so we ask Begin() to not render a background.
+
         if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
             window_flags |= ImGuiWindowFlags_NoBackground;
 
-        // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
-        // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
-        // all active windows docked into it will lose their parent and become undocked.
-        // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
-        // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
         if (!opt_padding)
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
         ImGui::Begin("DockSpace Demo", nullptr, window_flags);
+
         if (!opt_padding)
             ImGui::PopStyleVar();
 
@@ -679,7 +743,7 @@ namespace Faction_Fight_UI
             {
                 // Disabling fullscreen would allow the window to be moved to the front of other windows,
                 // which we can't undo at the moment without finer window depth/z control.
-                ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen);
+                //ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen);
                 ImGui::MenuItem("Padding", NULL, &opt_padding);
                 ImGui::Separator();
 
@@ -690,9 +754,9 @@ namespace Faction_Fight_UI
                 if (ImGui::MenuItem("Flag: PassthruCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0, opt_fullscreen)) { dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode; }
                 ImGui::Separator();
 
-
                 ImGui::EndMenu();
             }
+
 
             if (ImGui::BeginMenu("Tools"))
             {
@@ -732,11 +796,8 @@ namespace Faction_Fight_UI
 
 
 
+
         ImGui::Begin("Home", NULL, Main_Window_Flags);
-
-
-
-
 
 
 
@@ -746,40 +807,67 @@ namespace Faction_Fight_UI
 
         ImGui::InputText(".mints config file", MINT_CONFIG_FILE_PATH, 1024, text_flags);
         ImGui::SameLine();
-        if (ImGui::Button("Reset to default path"))
+        if (ImGui::Button("Find in browser"))
         {
-            printf("\nmint button pressed");
-            char default_path[32] = "../../../../API/config.mints\0";
-            for (unsigned _int8 i = 0; i < 32; i++)
+            temp_Wstring.clear();
+            temp_Wstring.erase(); //idk the difference
+
+            for (unsigned short i = 0; i < FILE_PATH_BUFFER_SIZE; i++)
             {
-                MINT_CONFIG_FILE_PATH[i] = default_path[i];
+                MINT_CONFIG_FILE_PATH[i] = '\0';
+            }
+
+            printf("\nmint button pressed");
+
+            wWinMain(NULL, NULL, NULL, NULL);
+
+            int i = 0;
+            for (std::wstring::iterator it = temp_Wstring.begin(); it != temp_Wstring.end(); ++it)
+            {
+                MINT_CONFIG_FILE_PATH[i] = *it;
+                i++;
             }
         }
 
         ImGui::InputText(".fuccs Factions file", FAC_CONFIG_FILE_PATH, 1024, text_flags);
         ImGui::SameLine();
-        if (ImGui::Button("Reset to default path ###"))
+        if (ImGui::Button("Find in browser ###"))
         {
-            printf("\nfucc button pressed");
-            char default_path[32] = "../../../../API/Faction.fucc\0";
-            for (unsigned _int8 i = 0; i < 32; i++)
+            temp_Wstring.clear();
+            temp_Wstring.erase(); //idk the difference
+            for (unsigned short i = 0; i < FILE_PATH_BUFFER_SIZE; i++)
             {
-                FAC_CONFIG_FILE_PATH[i] = default_path[i];
+                FAC_CONFIG_FILE_PATH[i] = '\0';
+            }
+            printf("\nfucc button pressed");
+            wWinMain(NULL, NULL, NULL, NULL);
+
+            int i = 0;
+            for (std::wstring::iterator it = temp_Wstring.begin(); it != temp_Wstring.end(); ++it)
+            {
+                FAC_CONFIG_FILE_PATH[i] = *it;
+                i++;
             }
         }
 
 
-
+        ImGui::Spacing();
         if (ImGui::Button("Rescan for .mints"))
         {
+            verified_mints = verify_file_type(true);
             alread_read_mints = false;
             found_mints = false;
             get_set_ints_from_config(&alread_read_mints, &found_mints);
         }
         ImGui::SameLine();
-        if (found_mints)
+
+        if (found_mints && verified_mints)
         {
-            ImGui::Text("Reading World Parametres from %s", MINT_CONFIG_FILE_PATH);
+            ImGui::TextColored(SUCCESS_COLOUR, "Reading World Parametres from %s", MINT_CONFIG_FILE_PATH);
+        }
+        else if (found_mints && !verified_mints)
+        {
+            ImGui::TextColored(WARNING_COLOUR, "We found the file, but it did not pass verification! Be careful");
         }
         else
         {
@@ -797,19 +885,37 @@ namespace Faction_Fight_UI
             Essential_List.clear();
             Faction_Structures.clear();
 
+            verified_fuccs = verify_file_type(false);
+
             alread_read_fuccs = false;
             found_fuccs = false;
             get_set_fac_details_from_config(&alread_read_fuccs, &found_fuccs);
         }
         ImGui::SameLine();
-        if (found_fuccs)
+
+        if (found_fuccs && verified_fuccs)
         {
-            ImGui::Text("Reading Faction Details from %s", FAC_CONFIG_FILE_PATH);
+            ImGui::TextColored(SUCCESS_COLOUR, "Reading Faction Details from %s", FAC_CONFIG_FILE_PATH);
+        }
+        else if (found_fuccs && !verified_fuccs)
+        {
+            ImGui::TextColored(WARNING_COLOUR, "We found the file, but it did not pass verification! Be careful");
         }
         else
         {
             ImGui::TextColored(DANGER_COLOUR, "WE CANT FIND THOSE DAMN FUCCS! MAKE SURE THE .FUCC PATH IS CORRECT");
         }
+
+
+        ImGui::Spacing(); ImGui::Spacing();
+        if (ImGui::Button("Create New Config") )
+        {
+            printf("Creating new config");
+        }
+        ImGui::Spacing(); ImGui::Spacing();
+
+
+
 
 
         ImGui::Separator();
@@ -821,7 +927,7 @@ namespace Faction_Fight_UI
         
         ImGui::Text(execute("cd ").c_str() );
 
-        if (found_mints)
+        if (found_mints && verified_mints)
         {
             ImGui::BulletText("World Width, World Height\t: %d, %d", WORLD_WIDTH, WORLD_HEIGHT);
             ImGui::BulletText("Number of Active Factions\t: %d", HOW_MANY_FACTIONS);
@@ -840,15 +946,15 @@ namespace Faction_Fight_UI
         }
 
 
-
-        static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
-        static ImVec2 cell_padding(3.0f, 6.0f);
-        static bool show_widget_frame_bg = true;
-
-        ImGui::SliderFloat2("CellPadding", &cell_padding.x, 0.0f, 10.0f, "%.0f");
-
-        if (found_mints)
+        if (found_mints && verified_mints)
         {
+
+            static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+            static ImVec2 cell_padding(3.0f, 6.0f);
+            static bool show_widget_frame_bg = true;
+
+            ImGui::SliderFloat2("CellPadding", &cell_padding.x, 0.0f, 10.0f, "%.0f");
+
             ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
 
             if (ImGui::BeginTable("table1", WORLD_WIDTH, flags))
