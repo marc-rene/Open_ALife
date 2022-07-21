@@ -70,9 +70,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
-  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -107,10 +104,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\;..\backends;%VULKAN_SDK%\include;..\examples\libs\glfw\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%VULKAN_SDK%\lib;..\examples\libs\glfw\lib-vc2010-64;..\backends;..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -136,6 +136,7 @@
     <ClCompile Include="..\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="..\backends\imgui_impl_vulkan.cpp" />
     <ClCompile Include="..\FF_UI.cpp" />
+    <ClCompile Include="..\File.cpp" />
     <ClCompile Include="..\imgui.cpp" />
     <ClCompile Include="..\imgui_demo.cpp" />
     <ClCompile Include="..\imgui_draw.cpp" />
@@ -147,6 +148,7 @@
     <ClInclude Include="..\backends\imgui_impl_glfw.h" />
     <ClInclude Include="..\backends\imgui_impl_vulkan.h" />
     <ClInclude Include="..\FF_UI.h" />
+    <ClInclude Include="..\File.h" />
     <ClInclude Include="..\imconfig.h" />
     <ClInclude Include="..\imgui.h" />
     <ClInclude Include="..\imgui_internal.h" />

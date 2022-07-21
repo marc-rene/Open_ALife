@@ -1,0 +1,4 @@
+﻿  FF_UI.cpp
+C:\TUD\OneDrive - Technological University Dublin\Random\C_tests\Faction-Fight\Frontend\C++\FF_UI.cpp(827,44): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\TUD\OneDrive - Technological University Dublin\Random\C_tests\Faction-Fight\Frontend\C++\FF_UI.cpp(848,43): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+  Main_Vulkan.vcxproj -> C:\TUD\OneDrive - Technological University Dublin\Random\C_tests\Faction-Fight\Frontend\C++\examples\x64\Debug\Main_Vulkan.exe

@@ -45,6 +45,9 @@
     <ClCompile Include="..\backends\imgui_impl_vulkan.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\File.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\FF_UI.h">
@@ -63,6 +66,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\backends\imgui_impl_vulkan.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\File.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
